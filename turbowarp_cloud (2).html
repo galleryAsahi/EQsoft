@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TurboWarp Cloud Variable Sender</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --panel: #10101a;
+    --border: #1e2a3a;
+    --accent: #00e5ff;
+    --accent2: #ff3c6e;
+    --success: #39ff8f;
+    --warn: #ffb800;
+    --text: #c8d8e8;
+    --dim: #4a5a6a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,229,255,0.03) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,229,255,0.03) 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 780px;
+  }
+
+  .title-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(16px, 3vw, 24px);
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,229,255,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--accent);
+    border-radius: 4px 0 0 4px;
+    opacity: 0.6;
+  }
+
+  .field-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: 0.8;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  input[type="text"], textarea {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input[type="text"]:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.15);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+    font-size: 11px;
+    word-break: break-all;
+  }
+
+  .keybind-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+
+  .keybind-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .keybind-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .add-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 5px 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .add-btn:hover {
+    background: rgba(0,229,255,0.1);
+  }
+
+  .keybind-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .keybind-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    transition: border-color 0.15s;
+  }
+
+  .keybind-row.active-row {
+    border-color: var(--success);
+    box-shadow: 0 0 8px rgba(57,255,143,0.15);
+  }
+
+  .key-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  kbd {
+    background: rgba(0,229,255,0.12);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    min-width: 32px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .key-separator {
+    color: var(--dim);
+    font-size: 10px;
+  }
+
+  .value-preview {
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .delete-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--dim);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 2px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .delete-btn:hover {
+    color: var(--accent2);
+    border-color: var(--accent2);
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .status-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .status-dot.connecting { background: var(--warn); box-shadow: 0 0 8px var(--warn); animation: pulse 1s infinite; }
+  .status-dot.error { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .status-text {
+    font-size: 12px;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .log-area {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    height: 110px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+
+  .log-area::-webkit-scrollbar { width: 4px; }
+  .log-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { display: block; }
+  .log-line.info  { color: var(--text); }
+  .log-line.ok    { color: var(--success); }
+  .log-line.warn  { color: var(--warn); }
+  .log-line.error { color: var(--accent2); }
+
+  .connect-btn {
+    background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,229,255,0.05));
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 11px 28px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    margin-right: 10px;
+  }
+
+  .connect-btn:hover {
+    background: rgba(0,229,255,0.2);
+    box-shadow: 0 0 16px rgba(0,229,255,0.2);
+  }
+
+  .connect-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .disconnect-btn {
+    background: transparent;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 11px 20px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .disconnect-btn:hover { background: rgba(255,60,110,0.1); }
+
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 99;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+
+  .flash-overlay.flash-ok   { background: rgba(57,255,143,0.07); opacity: 1; }
+  .flash-overlay.flash-fail { background: rgba(255,60,110,0.07); opacity: 1; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 28px 32px;
+    width: 420px;
+    max-width: 90vw;
+    box-shadow: 0 0 40px rgba(0,229,255,0.1);
+  }
+
+  .modal h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  .modal .field { margin-bottom: 14px; }
+
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+
+  .btn-save {
+    background: rgba(0,229,255,0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+
+  .btn-save:hover { background: rgba(0,229,255,0.25); }
+
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 8px 20px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .key-capture-input {
+    background: rgba(0,0,0,0.4);
+    border: 1px dashed var(--accent);
+    border-radius: 2px;
+    color: var(--accent);
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    width: 100%;
+    cursor: pointer;
+    text-align: center;
+    letter-spacing: 2px;
+    outline: none;
+  }
+
+  .key-capture-input:focus {
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="container">
+  <div class="title-bar">
+    <h1>☁ Cloud Variable Sender</h1>
+    <span class="subtitle">TurboWarp WebSocket</span>
+  </div>
+
+  <!-- 接続設定 -->
+  <div class="panel">
+    <div class="field-label">接続設定 / Connection</div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" style="font-size:9px">PROJECT ID</label>
+        <input type="text" id="projectId" value="636244032" placeholder="プロジェクトID">
+      </div>
+      <div class="field">
+        <label class="field-label" style="font-size:9px">USERNAME</label>
+        <input type="text" id="username" id="username" placeholder="ユーザー名（空欄で自動生成）">
+      </div>
+    </div>
+  </div>
+
+  <!-- キーバインド一覧 -->
+  <div class="keybind-panel">
+    <div class="keybind-header">
+      <span class="keybind-title">キーバインド / Keybinds</span>
+      <button class="add-btn" onclick="openAddModal()">+ ADD</button>
+    </div>
+    <div class="keybind-list" id="keybindList"></div>
+  </div>
+
+  <!-- ステータス -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">未接続</span>
+    <button class="connect-btn" id="connectBtn" onclick="connect()">CONNECT</button>
+    <button class="disconnect-btn" id="disconnectBtn" onclick="disconnect()" style="display:none">DISCONNECT</button>
+  </div>
+
+  <!-- ログ -->
+  <div class="log-area" id="logArea"></div>
+</div>
+
+<!-- 追加/編集モーダル -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">ADD KEYBIND</h2>
+    <div class="field">
+      <div class="field-label" style="font-size:9px">KEY (クリックして押す)</div>
+      <div class="key-capture-input" id="keyCaptureDisplay" tabindex="0"
+           onclick="startCapture()" onkeydown="captureKey(event)">クリックしてキーを押す</div>
+    </div>
+    <div class="field">
+      <div class="field-label" style="font-size:9px">VARIABLE NAME (変数名)</div>
+      <input type="text" id="modalVarName" value="☁ c2b0">
+    </div>
+    <div class="field">
+      <div class="field-label" style="font-size:9px">VALUE (送信する値)</div>
+      <textarea id="modalValue">0824438569000000000000000000000203061000987654322123445566576859400800000011000020000699000000000000000008000099990002000000000699250811080000070000030801000013990200000015271800101915089906990016071102009906000812990800010013999900001914000018000000060000000500009900009910990000069900010800110003000100100000002100000018000014990000050008029900001008100000100600000600009900009900039900000000009900000000000000000006999900009900000000039900020700110099190300990000019900000000990099009905990000990200020006990000000000000000009999200000990099000000009900999999000100000000000099019999990099029999999901000600009908990006009900990006990000990006000000009900000099000000010000000099000000999900080000000000990002991100089900011199990700000000009900059902000000000000000002020001082101000007100007000000000005000099009900120003000800000000999999999999000005030625009903110000990899990099990602000007110099110000990000069900000100000003050013000600000212010711079914009900000007991199130010999908990000000005009900000000020000000000139900050099080018000000009902990621081211060008009900990099009999990099009915000299990099990000000200000099990007991811081500000000000000000000009900102114000005992013151400101200999999999999009901000000000000999999000000009900070016000099000899000000990000081202000600000100039900990099999900000005001101000001000000291099080000009900000000990006089999050705001000999900000000009999999901000000990005000000029900020800050000000099009900009999019999999903000000990100000099080000000000050113000000110023009900120099000000000799000000000099990099999999009906120099000099089900009902999900999999999900990000000000990005151300089900120010991500000099990000990006200000000899009912990000999900001100000000101000080010009907001422000099020099000000009999000099019900000002000800001100230000060008000000000102010000000600000000020008080000130010999900309900990000999900990000000501101906000001990099089900999999999900999999991499000002000001000008000006000215060000000099990800200000000008000000000099000099990399000000990007000203020801990000000008000099000000089908030005059900060111000099000500020000000000000200000000990000990100000000000018000000000000000000110000000000000000000000000000000000000002009900000000000000010000000000992199000000120099000006030000000000000000000000000000000000002000000000000700000000000000000005000000000000100200030000000000000000000000000011000000000000000099000003990000991100000000050000000000000000000099000000009900030000990000009900000300000000039900000600000000000000000000000000009900061100110000000000000000009910000100000700000620000000000000000000000000000000000000000000000000990000000003000000990000000000009999001099000000001000000000990000000000000000000000000000000006019906000000000000001000000100001501000000009900009900000000000000000000000510002200100000000000000000990007110000000000000000000099000000000000000000009999089900000000000000009900139900000000000000000000000000000005990000009900000000000000000000000000000000000000080000000000000799000000021010000000000000000000000000000000010000000000000000120000000006000000000000000005000000009900000014000000000000000000000000000000000000071600990000000099991400000000009900000000990000020099009900000000000000069900000000000000000000000000000000000000000200000000010000000000000000100000000000000099000000001100000000000000000300000000000000000099990000000000000000000000120000000000000099000000990000000000000000000000000000000000001399000000000016000002000000000600009900000098979695949898</textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="btn-save" onclick="saveKeybind()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- State ----
+let ws = null;
+let wsState = 'disconnected'; // connecting | connected | disconnected
+let capturedKey = '';
+let editingIndex = -1;
+
+let keybinds = [
+  { key: 'f', varName: '☁ c2b0', value: '0824438569000000000000000000000203061000987654322123445566576859400800000011000020000699000000000000000008000099990002000000000699250811080000070000030801000013990200000015271800101915089906990016071102009906000812990800010013999900001914000018000000060000000500009900009910990000069900010800110003000100100000002100000018000014990000050008029900001008100000100600000600009900009900039900000000009900000000000000000006999900009900000000039900020700110099190300990000019900000000990099009905990000990200020006990000000000000000009999200000990099000000009900999999000100000000000099019999990099029999999901000600009908990006009900990006990000990006000000009900000099000000010000000099000000999900080000000000990002991100089900011199990700000000009900059902000000000000000002020001082101000007100007000000000005000099009900120003000800000000999999999999000005030625009903110000990899990099990602000007110099110000990000069900000100000003050013000600000212010711079914009900000007991199130010999908990000000005009900000000020000000000139900050099080018000000009902990621081211060008009900990099009999990099009915000299990099990000000200000099990007991811081500000000000000000000009900102114000005992013151400101200999999999999009901000000000000999999000000009900070016000099000899000000990000081202000600000100039900990099999900000005001101000001000000291099080000009900000000990006089999050705001000999900000000009999999901000000990005000000029900020800050000000099009900009999019999999903000000990100000099080000000000050113000000110023009900120099000000000799000000000099990099999999009906120099000099089900009902999900999999999900990000000000990005151300089900120010991500000099990000990006200000000899009912990000999900001100000000101000080010009907001422000099020099000000009999000099019900000002000800001100230000060008000000000102010000000600000000020008080000130010999900309900990000999900990000000501101906000001990099089900999999999900999999991499000002000001000008000006000215060000000099990800200000000008000000000099000099990399000000990007000203020801990000000008000099000000089908030005059900060111000099000500020000000000000200000000990000990100000000000018000000000000000000110000000000000000000000000000000000000002009900000000000000010000000000992199000000120099000006030000000000000000000000000000000000002000000000000700000000000000000005000000000000100200030000000000000000000000000011000000000000000099000003990000991100000000050000000000000000000099000000009900030000990000009900000300000000039900000600000000000000000000000000009900061100110000000000000000009910000100000700000620000000000000000000000000000000000000000000000000990000000003000000990000000000009999001099000000001000000000990000000000000000000000000000000006019906000000000000001000000100001501000000009900009900000000000000000000000510002200100000000000000000990007110000000000000000000099000000000000000000009999089900000000000000009900139900000000000000000000000000000005990000009900000000000000000000000000000000000000080000000000000799000000021010000000000000000000000000000000010000000000000000120000000006000000000000000005000000009900000014000000000000000000000000000000000000071600990000000099991400000000009900000000990000020099009900000000000000069900000000000000000000000000000000000000000200000000010000000000000000100000000000000099000000001100000000000000000300000000000000000099990000000000000000000000120000000000000099000000990000000000000000000000000000000000001399000000000016000002000000000600009900000098979695949898' }
+];
+
+// ---- Log ----
+function log(msg, type='info') {
+  const el = document.getElementById('logArea');
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  const line = document.createElement('span');
+  line.className = `log-line ${type}`;
+  line.textContent = `[${ts}] ${msg}`;
+  el.appendChild(line);
+  el.appendChild(document.createElement('br'));
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---- Render keybinds ----
+function renderKeybinds() {
+  const list = document.getElementById('keybindList');
+  list.innerHTML = '';
+  if (keybinds.length === 0) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:8px 4px">キーバインドなし — ADD で追加</div>';
+    return;
+  }
+  keybinds.forEach((kb, i) => {
+    const row = document.createElement('div');
+    row.className = 'keybind-row';
+    row.id = `kbrow-${i}`;
+    row.innerHTML = `
+      <div class="key-display">
+        <kbd>${escHtml(kb.key.toUpperCase())}</kbd>
+      </div>
+      <div style="overflow:hidden">
+        <div style="font-size:10px;color:var(--accent);margin-bottom:2px;letter-spacing:1px">${escHtml(kb.varName)}</div>
+        <div class="value-preview">${escHtml(kb.value.substring(0,60))}${kb.value.length>60?'…':''}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button style="background:rgba(57,255,143,0.12);border:1px solid var(--success);color:var(--success);font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 10px;cursor:pointer;border-radius:2px;transition:background 0.15s;white-space:nowrap" title="今すぐ送信" onclick="sendVar(${JSON.stringify(kb.varName)}, ${JSON.stringify(kb.value)})">▶ 送信</button>
+        <button class="delete-btn" title="編集" onclick="openEditModal(${i})">✎</button>
+        <button class="delete-btn" title="削除" onclick="deleteKeybind(${i})">✕</button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- WebSocket ----
+function setStatus(state, msg) {
+  wsState = state;
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const connectBtn = document.getElementById('connectBtn');
+  const disconnectBtn = document.getElementById('disconnectBtn');
+  dot.className = 'status-dot ' + (state === 'connected' ? 'connected' : state === 'connecting' ? 'connecting' : state === 'error' ? 'error' : '');
+  txt.textContent = msg;
+  if (state === 'connected') {
+    connectBtn.style.display = 'none';
+    disconnectBtn.style.display = '';
+  } else {
+    connectBtn.style.display = '';
+    disconnectBtn.style.display = 'none';
+    connectBtn.disabled = state === 'connecting';
+  }
+}
+
+// Close code descriptions from TurboWarp docs
+const CLOSE_CODES = {
+  4000: 'プロトコル違反 (4000)',
+  4002: 'ユーザー名エラー — 存在しないScratchアカウント or 無効な名前 (4002)',
+  4003: 'サーバー満員 (4003)',
+  4004: 'プロジェクトID が無効または利用不可 (4004)',
+};
+
+function randomUsername() {
+  const rand = Math.floor(Math.random() * 9000000 + 100000); // 6桁
+  return `player${rand}`;
+}
+
+function connect() {
+  const projectId = document.getElementById('projectId').value.trim();
+  let username = document.getElementById('username').value.trim();
+  if (!username) {
+    username = randomUsername();
+    document.getElementById('username').value = username;
+    log(`ユーザー名を自動生成: ${username}`, 'info');
+  }
+  if (!projectId) { log('プロジェクトIDを入力してください', 'warn'); return; }
+  if (ws) { ws.close(); ws = null; }
+
+  setStatus('connecting', '接続中...');
+  log(`wss://clouddata.turbowarp.org に接続中 (project: ${projectId})`, 'info');
+
+  try {
+    ws = new WebSocket('wss://clouddata.turbowarp.org');
+  } catch(e) {
+    log('WebSocket 作成失敗: ' + e.message, 'error');
+    setStatus('error', 'WebSocket 作成失敗');
+    return;
+  }
+
+  ws.onopen = () => {
+    // ※ JSON に改行を含めない・\n を末尾に付けない
+    const handshake = JSON.stringify({ method: 'handshake', user: username, project_id: String(projectId) });
+    ws.send(handshake);
+    setStatus('connected', `接続済み — project: ${projectId} / user: ${username}`);
+    log('接続成功 · ハンドシェイク送信', 'ok');
+  };
+
+  ws.onmessage = (e) => {
+    // サーバーからの set 通知など
+    const raw = e.data.trim();
+    if (!raw) return;
+    // 複数メッセージが\nで区切られて来ることがある
+    raw.split('\n').forEach(line => {
+      try {
+        const obj = JSON.parse(line);
+        if (obj.method === 'set') {
+          log(`受信: ${obj.name} = ${String(obj.value).substring(0,40)}`, 'info');
+        } else {
+          log('受信: ' + line.substring(0, 80), 'info');
+        }
+      } catch { log('受信(raw): ' + line.substring(0,80), 'info'); }
+    });
+  };
+
+  ws.onerror = (e) => {
+    log('WebSocket エラー発生', 'error');
+    setStatus('error', 'エラー発生');
+  };
+
+  ws.onclose = (e) => {
+    const reason = CLOSE_CODES[e.code] || `コード: ${e.code}`;
+    log(`切断 — ${reason}`, e.code >= 4000 ? 'error' : 'warn');
+    if (e.code === 4002) log('→ ヒント: ユーザー名を変えて再接続してください（Scratchに存在するアカウント名か player+数字）', 'warn');
+    if (e.code === 4004) log('→ ヒント: プロジェクトIDが正しいか確認してください', 'warn');
+    setStatus('disconnected', `切断 — ${reason}`);
+    ws = null;
+  };
+}
+
+function disconnect() {
+  if (ws) { ws.close(); ws = null; }
+}
+
+function sendVar(varName, value) {
+  const projectId = document.getElementById('projectId').value.trim();
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    log('未接続 — まず CONNECT してください', 'warn');
+    flash('fail');
+    return false;
+  }
+  const payload = { method: 'set', name: varName, value: String(value), project_id: String(projectId) };
+  ws.send(JSON.stringify(payload));
+  log(`送信 → ${varName} = ${String(value).substring(0,40)}${String(value).length>40?'…':''}`, 'ok');
+  flash('ok');
+  // highlight row
+  keybinds.forEach((kb, i) => {
+    if (kb.varName === varName) {
+      const row = document.getElementById(`kbrow-${i}`);
+      if (row) {
+        row.classList.add('active-row');
+        setTimeout(() => row.classList.remove('active-row'), 600);
+      }
+    }
+  });
+  return true;
+}
+
+// ---- Flash ----
+function flash(type) {
+  const el = document.getElementById('flashOverlay');
+  el.className = 'flash-overlay flash-' + type;
+  setTimeout(() => el.className = 'flash-overlay', 200);
+}
+
+// ---- Key listener ----
+document.addEventListener('keydown', (e) => {
+  // モーダルが開いているときは無視
+  if (document.getElementById('modalOverlay').classList.contains('open')) return;
+
+  const key = e.key.toLowerCase();
+  let matched = false;
+  keybinds.forEach(kb => {
+    if (kb.key.toLowerCase() === key) {
+      matched = true;
+      e.preventDefault();
+      sendVar(kb.varName, kb.value);
+    }
+  });
+  // デバッグ: マッチしなかったキーもログ表示（送信後は省略）
+  if (!matched) {
+    log(`キー検知: "${e.key}" — 対応するキーバインドなし`, 'info');
+  }
+});
+
+// ---- Modal ----
+function openAddModal() {
+  editingIndex = -1;
+  document.getElementById('modalTitle').textContent = 'ADD KEYBIND';
+  capturedKey = '';
+  document.getElementById('keyCaptureDisplay').textContent = 'クリックしてキーを押す';
+  document.getElementById('modalVarName').value = '☁ c2b0';
+  document.getElementById('modalValue').value = '';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(i) {
+  editingIndex = i;
+  const kb = keybinds[i];
+  document.getElementById('modalTitle').textContent = 'EDIT KEYBIND';
+  capturedKey = kb.key;
+  document.getElementById('keyCaptureDisplay').textContent = kb.key.toUpperCase();
+  document.getElementById('modalVarName').value = kb.varName;
+  document.getElementById('modalValue').value = kb.value;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  capturedKey = '';
+}
+
+function startCapture() {
+  document.getElementById('keyCaptureDisplay').textContent = '▌ キーを押してください...';
+  document.getElementById('keyCaptureDisplay').focus();
+}
+
+function captureKey(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  // ignore modifier-only
+  if (['Control','Shift','Alt','Meta'].includes(e.key)) return;
+  capturedKey = e.key;
+  document.getElementById('keyCaptureDisplay').textContent = e.key.toUpperCase();
+}
+
+function saveKeybind() {
+  if (!capturedKey) { alert('キーを設定してください'); return; }
+  const varName = document.getElementById('modalVarName').value.trim();
+  const value   = document.getElementById('modalValue').value;
+  if (!varName) { alert('変数名を入力してください'); return; }
+
+  const entry = { key: capturedKey, varName, value };
+  if (editingIndex >= 0) {
+    keybinds[editingIndex] = entry;
+  } else {
+    keybinds.push(entry);
+  }
+  renderKeybinds();
+  closeModal();
+}
+
+function deleteKeybind(i) {
+  keybinds.splice(i, 1);
+  renderKeybinds();
+}
+
+// ---- Init ----
+renderKeybinds();
+log('準備完了 — CONNECT ボタンで接続してください', 'info');
+</script>
+</body>
+</html>
